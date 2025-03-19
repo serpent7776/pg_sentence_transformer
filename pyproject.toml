@@ -1,0 +1,38 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pg_sentence_transformer"
+version = "0.1.0"
+description = "Ulitity functions for pg_sentence_transformer Postgres extension"
+# readme = "README.md"
+requires-python = ">=3.8"
+license = {text = "BSD-2-Clause"}
+authors = [
+    {name = "Serpent7776", email = "serpent7776@google.com"}
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: BSD License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "sentence-transformers>=3.4.0",
+    "torch>=2.6.0",
+    "transformers>=4.49.0",
+    "numpy>=2.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/serpent7776/pg_sentence_transformer"
+"Bug Tracker" = "https://github.com/serpent7776/pg_sentence_transformer/issues"
+
+[tool.setuptools]
+packages = ["pg_sentence_transformer"]

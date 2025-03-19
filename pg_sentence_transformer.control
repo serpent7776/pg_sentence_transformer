@@ -1,0 +1,5 @@
+comment = 'Computes embeddings using huggingface model without the need for external LLM setup'
+default_version = '0.1'
+module_pathname = '$libdir/pg_sentence_transformer'
+relocatable = true
+requires='plpython3u,vector'
