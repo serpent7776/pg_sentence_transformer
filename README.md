@@ -47,6 +47,7 @@ sentence_transformer.venv_path
 Path to python virtual environment where `pg_sentence_transformer` python package and its dependencies were installed.
 Virtual environment needs to be created with `virtualenv` tool.
 Note that this path must be readable by `postges` user.
+If the path is empty, then virtual environment is not used and packages are loaded from system packages.
 
 ```
 sentence_transformer.database_name

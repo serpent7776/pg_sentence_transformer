@@ -123,6 +123,7 @@ void pg_sentence_transformer_main(Datum main_arg)
 			 errdetail("SPI_connect failed")));
 	}
 
+	if (strcmp(TransformerVenvPath, "") != 0)
 	{
 		const char* sql = "CALL sentence_transformer.activate_python_venv($1)";
 		pgstat_report_activity(STATE_RUNNING, sql);
