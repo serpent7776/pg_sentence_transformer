@@ -35,59 +35,56 @@ $$
     nltk.download('punkt')
     nltk.download('punkt_tab')
 
-    sql = f"CREATE TABLE IF NOT EXISTS {schema}.{text_table}_embeddings(ref_id BIGINT PRIMARY KEY, embedding vector(384) NOT NULL)"
-    r = plpy.execute(sql)
+    r = plpy.execute(f"""
+        CREATE TABLE IF NOT EXISTS {schema}.{text_table}_embeddings(ref_id BIGINT PRIMARY KEY, embedding vector(384) NOT NULL)
+        """)
 
-    sql = f"CREATE INDEX IF NOT EXISTS {text_table}_embeddings_idx ON {schema}.{text_table}_embeddings USING ivfflat(embedding);"
-    r = plpy.execute(sql)
+    r = plpy.execute(f"""
+        CREATE INDEX IF NOT EXISTS {text_table}_embeddings_idx ON {schema}.{text_table}_embeddings USING ivfflat(embedding)
+        """)
 
-    sql = f"""
-    CREATE OR REPLACE FUNCTION {schema}.pg_sentence_transformer_{text_table}_enqueue_proc()
-    RETURNS TRIGGER LANGUAGE plpgsql
-    AS $f$
-    BEGIN
+    r = plpy.execute(f"""
+        CREATE OR REPLACE FUNCTION {schema}.pg_sentence_transformer_{text_table}_enqueue_proc()
+        RETURNS TRIGGER LANGUAGE plpgsql
+        AS $f$
+        BEGIN
+            INSERT INTO sentence_transformer.queue(id)
+            VALUES (NEW.{id_col});
+            RETURN NULL;
+        END;
+        $f$
+        """)
+
+    r = plpy.execute(f"""
+        CREATE OR REPLACE TRIGGER {schema}_{text_table}_insert_trigger
+        AFTER INSERT OR UPDATE OF {src_col} ON {schema}.{text_table}
+        FOR EACH ROW EXECUTE FUNCTION {schema}.pg_sentence_transformer_{text_table}_enqueue_proc()
+        """)
+
+    r = plpy.execute(f"""
+        CREATE OR REPLACE FUNCTION {schema}.pg_sentence_transformer_{text_table}_delete_proc()
+        RETURNS TRIGGER LANGUAGE plpgsql
+        AS $f$
+        BEGIN
+            DELETE FROM {schema}.{text_table}_embeddings
+            WHERE ref_id = OLD.{id_col};
+            RETURN NULL;
+        END;
+        $f$
+        """)
+
+    r = plpy.execute(f"""
+        CREATE OR REPLACE TRIGGER {schema}_{text_table}_delete_trigger
+        AFTER DELETE ON {schema}.{text_table}
+        FOR EACH ROW EXECUTE FUNCTION {schema}.pg_sentence_transformer_{text_table}_delete_proc()
+        """)
+
+    r = plpy.execute(f"""
         INSERT INTO sentence_transformer.queue(id)
-        VALUES (NEW.{id_col});
-        RETURN NULL;
-    END;
-    $f$
-    """
-    r = plpy.execute(sql)
-
-    sql = f"""
-    CREATE OR REPLACE TRIGGER {schema}_{text_table}_insert_trigger
-    AFTER INSERT OR UPDATE OF {src_col} ON {schema}.{text_table}
-    FOR EACH ROW EXECUTE FUNCTION {schema}.pg_sentence_transformer_{text_table}_enqueue_proc()
-    """
-    r = plpy.execute(sql)
-
-    sql = f"""
-    CREATE OR REPLACE FUNCTION {schema}.pg_sentence_transformer_{text_table}_delete_proc()
-    RETURNS TRIGGER LANGUAGE plpgsql
-    AS $f$
-    BEGIN
-        DELETE FROM {schema}.{text_table}_embeddings
-        WHERE ref_id = OLD.{id_col};
-        RETURN NULL;
-    END;
-    $f$
-    """
-    r = plpy.execute(sql)
-
-    sql = f"""
-    CREATE OR REPLACE TRIGGER {schema}_{text_table}_delete_trigger
-    AFTER DELETE ON {schema}.{text_table}
-    FOR EACH ROW EXECUTE FUNCTION {schema}.pg_sentence_transformer_{text_table}_delete_proc()
-    """
-    r = plpy.execute(sql)
-
-    sql = f"""
-    INSERT INTO sentence_transformer.queue(id)
-    SELECT {id_col} FROM {schema}.{text_table} AS s
-    WHERE NOT EXISTS (select 1 from {schema}.{text_table}_embeddings AS e where e.ref_id=s.{id_col})
-    ON CONFLICT (id) DO NOTHING
-    """
-    r = plpy.execute(sql)
+        SELECT {id_col} FROM {schema}.{text_table} AS s
+        WHERE NOT EXISTS (select 1 from {schema}.{text_table}_embeddings AS e where e.ref_id=s.{id_col})
+        ON CONFLICT (id) DO NOTHING
+        """)
 $$
 LANGUAGE plpython3u;
 
